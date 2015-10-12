@@ -739,6 +739,14 @@ typedef struct {
 #endif
 } LTE_eNB_PUSCH;
 
+
+typedef struct {
+  /// \brief Holds the compensated rx signal for PUCCH
+  /// first index: rx antenna
+  /// second index: resource element
+  int16_t **rxcomp;
+} LTE_eNB_PUCCH;
+
 typedef struct {
   /// \brief Holds the transmit data in time domain.
   /// For IFFT_FPGA this points to the same memory as PHY_vars->tx_vars[a].TX_DMA_BUFFER.

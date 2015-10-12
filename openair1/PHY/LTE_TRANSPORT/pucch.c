@@ -455,7 +455,7 @@ int32_t rx_pucch(PHY_VARS_eNB *phy_vars_eNB,
   uint32_t u,v,n,aa;
   uint32_t z[12*14];
   int16_t *zptr;
-  int16_t rxcomp[NB_ANTENNAS_RX][2*12*14];
+  int16_t **rxcomp = phy_vars_eNB->lte_eNB_pucch_vars[UE_id].rxcomp;
   uint8_t ns,N_UL_symb,nsymb,n_oc,n_oc0,n_oc1;
   uint8_t c = (frame_parms->Ncp==0) ? 3 : 2;
   uint16_t nprime,nprime0,nprime1;

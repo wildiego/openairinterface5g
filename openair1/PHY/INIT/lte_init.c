@@ -1021,10 +1021,7 @@ int phy_init_lte_ue(PHY_VARS_UE *phy_vars_ue,
   // many memory allocation sizes are hard coded
   AssertFatal( frame_parms->nb_antennas_rx <= 2, "hard coded allocation for ue_common_vars->dl_ch_estimates[eNB_id]" );
   AssertFatal( phy_vars_ue->n_connected_eNB <= NUMBER_OF_CONNECTED_eNB_MAX, "n_connected_eNB is too large" );
-#ifndef USER_MODE
-  AssertFatal( frame_parms->nb_antennas_tx <= NB_ANTENNAS_TX, "nb_antennas_tx too large" );
-  AssertFatal( frame_parms->nb_antennas_rx <= NB_ANTENNAS_RX, "nb_antennas_rx too large" );
-#endif
+
   // init phy_vars_ue
 
   for (i=0; i<4; i++) {
@@ -1227,6 +1224,7 @@ int phy_init_lte_eNB(PHY_VARS_eNB *phy_vars_eNB,
   LTE_DL_FRAME_PARMS* const frame_parms = &phy_vars_eNB->lte_frame_parms;
   LTE_eNB_COMMON* const eNB_common_vars = &phy_vars_eNB->lte_eNB_common_vars;
   LTE_eNB_PUSCH** const eNB_pusch_vars  = phy_vars_eNB->lte_eNB_pusch_vars;
+  LTE_eNB_PUCCH* const eNB_pucch_vars   = phy_vars_eNB->lte_eNB_pucch_vars;
   LTE_eNB_SRS* const eNB_srs_vars       = phy_vars_eNB->lte_eNB_srs_vars;
   LTE_eNB_PRACH* const eNB_prach_vars   = &phy_vars_eNB->lte_eNB_prach_vars;
   int i, j, eNB_id, UE_id; 
@@ -1258,11 +1256,6 @@ int phy_init_lte_eNB(PHY_VARS_eNB *phy_vars_eNB,
 
   phy_vars_eNB->first_run_I0_measurements =
     1; ///This flag used to be static. With multiple eNBs this does no longer work, hence we put it in the structure. However it has to be initialized with 1, which is performed here.
-
-#ifndef USER_MODE
-  AssertFatal( frame_parms->nb_antennas_tx <= NB_ANTENNAS_TX, "nb_antennas_tx too large" );
-  AssertFatal( frame_parms->nb_antennas_rx <= NB_ANTENNAS_RX, "nb_antennas_rx too large" );
-#endif
 
   for (eNB_id=0; eNB_id<3; eNB_id++) {
 
@@ -1365,8 +1358,7 @@ int phy_init_lte_eNB(PHY_VARS_eNB *phy_vars_eNB,
 
   for (UE_id=0; UE_id<NUMBER_OF_UE_MAX; UE_id++) {
 
-    //FIXME
-    eNB_pusch_vars[UE_id] = (LTE_eNB_PUSCH*)malloc16_clear( NUMBER_OF_UE_MAX*sizeof(LTE_eNB_PUSCH) );
+    eNB_pusch_vars[UE_id] = (LTE_eNB_PUSCH*)malloc16_clear(sizeof(LTE_eNB_PUSCH));
 
     if (abstraction_flag==0) {
       for (eNB_id=0; eNB_id<3; eNB_id++) {
@@ -1431,8 +1423,15 @@ int phy_init_lte_eNB(PHY_VARS_eNB *phy_vars_eNB,
       } //eNB_id
 
       eNB_pusch_vars[UE_id]->llr = (int16_t*)malloc16_clear( (8*((3*8*6144)+12))*sizeof(int16_t) );
+
+      eNB_pucch_vars[UE_id].rxcomp = malloc16_clear(frame_parms->nb_antennas_rx*sizeof(int16_t*));
+      for (i=0; i<frame_parms->nb_antennas_rx; i++) {
+	eNB_pucch_vars[UE_id].rxcomp[i] = malloc16_clear(2*12*frame_parms->symbols_per_tti*sizeof(int16_t));
+      }
     } // abstraction_flag
   } //UE_id
+
+
 
   if (abstraction_flag==0) {
     if (is_secondary_eNB) {

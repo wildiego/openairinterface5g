@@ -868,11 +868,14 @@ int random_channel(channel_desc_t *desc, uint8_t abstraction_flag)
 
   double s;
   int i,k,l,aarx,aatx;
-  struct complex anew[NB_ANTENNAS_TX*NB_ANTENNAS_RX],acorr[NB_ANTENNAS_TX*NB_ANTENNAS_RX];
+  struct complex *anew=NULL,*acorr=NULL;
   struct complex phase, alpha, beta;
 
-  if ((desc->nb_tx>NB_ANTENNAS_TX) || (desc->nb_rx > NB_ANTENNAS_RX)) {
-    msg("random_channel.c: Error: temporary buffer for channel not big enough (%d,%d)\n",desc->nb_tx,desc->nb_rx);
+  anew = (struct complex *) malloc(desc->nb_rx*desc->nb_rx*sizeof(struct complex));
+  acorr = (struct complex *) malloc(desc->nb_rx*desc->nb_rx*sizeof(struct complex));
+
+  if ((anew==NULL) || (acorr==NULL)) {
+    LOG_E(PHY,"random_channel.c: Error: cannot allocate memory for (%d,%d) antennas\n",desc->nb_tx,desc->nb_rx);
     return(-1);
   }
 
@@ -1010,6 +1013,11 @@ int random_channel(channel_desc_t *desc, uint8_t abstraction_flag)
 
   if (desc->first_run==1)
     desc->first_run = 0;
+
+  free(acorr);
+  acorr=NULL;
+  free(anew);
+  anew=NULL;
 
   return (0);
 }

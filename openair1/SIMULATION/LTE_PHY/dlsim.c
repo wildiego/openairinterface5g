@@ -371,6 +371,7 @@ int main(int argc, char **argv)
   //signal(SIGABRT, handler);
 
   logInit();
+  set_glog(LOG_INFO, LOG_MED);
 
   // default parameters
   n_frames = 1000;
@@ -524,7 +525,7 @@ int main(int argc, char **argv)
         break;
 
       default:
-        msg("Unsupported channel model!\n");
+        printf("Unsupported channel model!\n");
         exit(-1);
       }
 
@@ -539,7 +540,7 @@ int main(int argc, char **argv)
           (transmission_mode!=4) &&
           (transmission_mode!=5) &&
           (transmission_mode!=6)) {
-        msg("Unsupported transmission mode %d\n",transmission_mode);
+        printf("Unsupported transmission mode %d\n",transmission_mode);
         exit(-1);
       }
 
@@ -553,7 +554,7 @@ int main(int argc, char **argv)
       n_tx=atoi(optarg);
 
       if ((n_tx==0) || (n_tx>2)) {
-        msg("Unsupported number of tx antennas %d\n",n_tx);
+        printf("Unsupported number of tx antennas %d\n",n_tx);
         exit(-1);
       }
 
@@ -563,7 +564,7 @@ int main(int argc, char **argv)
       n_rx=atoi(optarg);
 
       if ((n_rx==0) || (n_rx>2)) {
-        msg("Unsupported number of rx antennas %d\n",n_rx);
+        printf("Unsupported number of rx antennas %d\n",n_rx);
         exit(-1);
       }
 
@@ -603,7 +604,7 @@ int main(int argc, char **argv)
       openair_daq_vars.use_ia_receiver = 1;
 
       if ((n_tx!=2) || (transmission_mode!=5)) {
-        msg("IA receiver only supported for TM5!");
+        printf("IA receiver only supported for TM5!\n");
         exit(-1);
       }
 
@@ -613,7 +614,7 @@ int main(int argc, char **argv)
       i_mod = atoi(optarg);
 
       if (i_mod!=2 && i_mod!=4 && i_mod!=6) {
-        msg("Wrong i_mod %d, should be 2,4 or 6\n",i_mod);
+        printf("Wrong i_mod %d, should be 2,4 or 6\n",i_mod);
         exit(-1);
       }
 
@@ -972,7 +973,7 @@ int main(int argc, char **argv)
   }
 
   if (eNB2UE[0]==NULL) {
-    msg("Problem generating channel model. Exiting.\n");
+    printf("Problem generating channel model. Exiting.\n");
     exit(-1);
   }
 
@@ -2560,7 +2561,7 @@ PMI_FEEDBACK:
                                                    subframe);
 
             if (num_pdcch_symbols_2 > num_pdcch_symbols) {
-              msg("Error: given num_pdcch_symbols not big enough (%d > %d)\n",num_pdcch_symbols_2,num_pdcch_symbols);
+              printf("Error: given num_pdcch_symbols not big enough (%d > %d)\n",num_pdcch_symbols_2,num_pdcch_symbols);
               exit(-1);
             }
 
