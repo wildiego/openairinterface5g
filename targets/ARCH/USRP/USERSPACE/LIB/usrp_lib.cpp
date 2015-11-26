@@ -54,6 +54,10 @@
 #  include <immintrin.h>
 #endif
 
+#ifdef __arm__
+#include <arm_neon.h>
+#endif
+
 typedef struct
 {
 
