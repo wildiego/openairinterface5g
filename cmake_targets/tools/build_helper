@@ -159,10 +159,56 @@ install_gnutls_from_source(){
 
 check_install_usrp_uhd_driver(){
         v=$(lsb_release -cs)
-        $SUDO apt-add-repository "deb http://files.ettus.com/binaries/uhd/repo/uhd/ubuntu/$v $v main"
+        #$SUDO apt-add-repository "deb http://files.ettus.com/binaries/uhd/repo/uhd/ubuntu/$v $v main"
         $SUDO apt-get update
         $SUDO apt-get -y install  python python-tk libboost-all-dev libusb-1.0-0-dev
-        $SUDO apt-get -y install -t `lsb_release -cs` uhd --force-yes
+ 
+        uhd_install_dir = /opt/uhd
+        uhd_install_log = $OPENAIR_DIR/cmake_targets/log/uhd_install.log
+        #$SUDO apt-get -y install -t `lsb_release -cs` uhd --force-yes
+        #The following scripts will remove existing UHD installation and install them to /opt/uhd
+        echo "The follwing script will install UHD in $uhd_install_dir and will remove existing Ubuntu UHD installation"
+        read -p "Do you want to install UHD Driver ? <y/N> " prompt 
+	if [[ $prompt =~ [yY](es)* ]]
+	  then
+            echo_info " The UHD installation log is located here : $uhd_install_log " 
+            pwd = `pwd`
+            (
+            cd /tmp
+            uhd_dir = `mktemp -d`
+            cd $uhd_dir
+            echo "uhd Temp Dir : $uhd_dir " 
+            echo "Removing earlier UHD installation in $uhd_install_dir"
+            $SUDO rm -fr $uhd_install_dir
+            $SUDO mkdir -p $uhd_install_dir
+            $SUDO apt-get install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils cmake build-essential
+            git clone git://github.com/EttusResearch/uhd.git
+            cd <uhd-repo-path>/host
+            mkdir build
+            cd build
+            cmake -DCMAKE_INSTALL_PREFIX=/opt/uhd ../
+            make -j`nproc`
+            make test
+            $SUDO make install 
+            echo "The following lines are added for UHD installation" >> ~/.bashrc
+            echo "export PATH=\$PATH:/opt/uhd/bin" >> ~/.bashrc
+            echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/opt/uhd/lib" >> ~/.bashrc
+            
+            $SUDO echo "The following lines are added for UHD installation" >> /etc/profile
+            $SUDO echo "PATH=\$PATH:/opt/uhd/bin" >> /etc/profile
+            $SUDO echo "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/opt/uhd/lib" >> /etc/profile
+            
+            source ~/.bashrc
+            $SUDO $uhd_install_dir/bin/uhd_images_downloader
+            $SUDO ln -s $uhd_install_dir/include/uhd.h /usr/include/uhd.h
+            rm -fR $uhd_dir
+            ) >& $uhd_install_log
+            cd $pwd
+          else
+            echo_info "Skipping UHD Installation"
+        fi
+
+
 }
 check_install_bladerf_driver(){
 	$SUDO add-apt-repository -y ppa:bladerf/bladerf
