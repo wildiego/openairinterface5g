@@ -52,7 +52,7 @@
 /*----------------------------------------------------------------------------*/
 
 #ifndef HAVE_STRNDUP
-char * strndup (const char *s, size_t size);
+//char * strndup (const char *s, size_t size);
 #endif
 
 static int oai_emulation_;  /*!< \brief indicating that the parsing position is now within OAI_Emulation_*/

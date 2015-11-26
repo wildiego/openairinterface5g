@@ -255,7 +255,18 @@ check_install_oai_software() {
 	openssl \
 	python  \
 	subversion \
-        xmlstarlet
+        xmlstarlet \
+        libcrypto++-dev \
+        libconfig8-dev \
+        liblapack-dev \
+        libatlas-dev \
+        libblas3gf \
+        libsctp-dev \ 
+        libforms-dev \
+        libforms-bin \ 
+        gccxml
+
+
     $SUDO update-alternatives --set liblapack.so /usr/lib/atlas-base/atlas/liblapack.so
     if [ `lsb_release -rs` = '12.04' ] ; then
         install_nettle_from_source
