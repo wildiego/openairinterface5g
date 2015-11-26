@@ -201,8 +201,9 @@ check_install_usrp_uhd_driver(){
             source ~/.bashrc
             $SUDO $uhd_install_dir/bin/uhd_images_downloader
             $SUDO ln -s $uhd_install_dir/include/uhd.h /usr/include/uhd.h
-            rm -fR $uhd_dir
             ) >& $uhd_install_log
+            
+            rm -fR $uhd_dir
             cd $pwd
           else
             echo_info "Skipping UHD Installation"
@@ -321,7 +322,7 @@ install_asn1c_from_source(){
     patch -p0 < $OPENAIR_DIR/openair3/S1AP/MESSAGES/ASN1/asn1cpatch_2.p0 >> /tmp/log_compile_asn1c
     patch -p0 < $OPENAIR_DIR/openair2/RRC/LITE/MESSAGES/asn1c/asn1cpatch.p0 >> /tmp/log_compile_asn1c
     ./configure
-    make > /tmp/log_compile_asn1c 2>&1
+    make -j`nproc` > /tmp/log_compile_asn1c 2>&1
     $SUDO make install
 }
 
