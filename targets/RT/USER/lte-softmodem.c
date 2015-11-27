@@ -1582,12 +1582,6 @@ static void* eNB_thread( void* arg )
   attr.sched_deadline = (0.9 * 100) * 10000;
   attr.sched_period   = 1 * 1000000;
 
-
-  /* pin the eNB main thread to CPU0*/
-  /* if (pthread_setaffinity_np(pthread_self(), sizeof(mask),&mask) <0) {
-     perror("[MAIN_ENB_THREAD] pthread_setaffinity_np failed\n");
-     }*/
-
   if (sched_setattr(0, &attr, flags) < 0 ) {
     perror("[SCHED] main eNB thread: sched_setattr failed\n");
     exit_fun("Nothing to add");
@@ -1598,6 +1592,30 @@ static void* eNB_thread( void* arg )
 
 #endif
 #endif
+
+/*
+ cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(7, &cpuset);
+  // pin the eNB main thread to CPU0
+   if (pthread_setaffinity_np(pthread_self(), sizeof(cpuset),&cpuset) <0) {
+     perror("[MAIN_ENB_THREAD] pthread_setaffinity_np failed\n");
+     }
+
+          // Check the actual affinity mask assigned to the thread 
+           int s;
+           s = pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+           if (s != 0)
+               perror("pthread_getaffinity_np:");
+
+           printf("Set returned by pthread_getaffinity_np() contained:\n");
+           for (int j = 0; j < CPU_SETSIZE; j++)
+               if (CPU_ISSET(j, &cpuset))
+                   printf("    CPU %d\n", j);
+*/
+ // exit_fun("exiting rohit");
+
+
 
   // stop early, if an exit is requested
   // FIXME really neccessary?
@@ -1640,6 +1658,7 @@ static void* eNB_thread( void* arg )
 
   while (!oai_exit) {
     start_meas( &softmodem_stats_mt );
+
 
 #ifdef EXMIMO
     hw_slot = (((((volatile unsigned int *)DAQ_MBOX)[0]+1)%150)<<1)/15;
@@ -1782,9 +1801,9 @@ static void* eNB_thread( void* arg )
       stop_meas( &softmodem_stats_hw );
       clock_gettime( CLOCK_MONOTONIC, &trx_time1 );
 
-      if (frame > 20){ 
+      if (frame > 200){ 
 	if (rxs != spp)
-	  exit_fun( "problem receiving samples" );
+	  exit_fun( "problem receiving samples rohit" );
       }
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME( VCD_SIGNAL_DUMPER_FUNCTIONS_TRX_READ, 0 );
 
@@ -1799,12 +1818,22 @@ static void* eNB_thread( void* arg )
       //printf("tx_pos %d ts %d, ts_offset %d txp[i] %p, ap %d\n", tx_pos,  timestamp, (timestamp+(tx_delay*spp)-tx_forward_nsamps),txp[i], i);
       // if symb_written < spp ==> error 
       if (frame > 50) {
+      
 	openair0.trx_write_func(&openair0,
 				(timestamp+(openair0_cfg[card].tx_delay*spp)-openair0_cfg[card].tx_forward_nsamps),
 				txp,
 				spp,
 				PHY_vars_eNB_g[0][0]->lte_frame_parms.nb_antennas_tx,
 				1);
+    
+      /*
+	openair0.trx_write_func(&openair0,
+				(timestamp+(5.0*1024.0)-openair0_cfg[card].tx_forward_nsamps),
+				txp,
+				spp,
+				PHY_vars_eNB_g[0][0]->lte_frame_parms.nb_antennas_tx,
+				1);
+     */
       }
       
       VCD_SIGNAL_DUMPER_DUMP_VARIABLE_BY_NAME( VCD_SIGNAL_DUMPER_VARIABLES_TRX_TS, timestamp&0xffffffff );
@@ -1834,18 +1863,18 @@ static void* eNB_thread( void* arg )
 
           pthread_mutex_unlock( &PHY_vars_eNB_g[0][CC_id]->proc[hw_subframe].mutex_tx );
 
-          if (cnt_tx == 0) {
+          /*if (cnt_tx == 0) {
             // the thread was presumably waiting where it should and can now be woken up
-            if (pthread_cond_signal(&PHY_vars_eNB_g[0][CC_id]->proc[hw_subframe].cond_tx) != 0) {
+              if (pthread_cond_signal(&PHY_vars_eNB_g[0][CC_id]->proc[hw_subframe].cond_tx) != 0) {
               LOG_E( PHY, "[eNB] ERROR pthread_cond_signal for eNB TX thread %d\n", hw_subframe );
               exit_fun( "ERROR pthread_cond_signal" );
-              break;
-            }
-          } else {
+              break; 
+            } 
+          } else { 
             LOG_W( PHY,"[eNB] Frame %d, eNB TX thread %d busy!! (rx_cnt %u, cnt_tx %i)\n", PHY_vars_eNB_g[0][CC_id]->proc[hw_subframe].frame_tx, hw_subframe, rx_pos, cnt_tx );
             exit_fun( "TX thread busy" );
-            break;
-          }
+            break; 
+          }*/
         }
       }
 
@@ -1899,15 +1928,15 @@ static void* eNB_thread( void* arg )
           PHY_vars_eNB_g[0][CC_id]->proc[sf].instance_cnt_tx++;
           pthread_mutex_unlock(&PHY_vars_eNB_g[0][CC_id]->proc[sf].mutex_tx);
 
-          if (PHY_vars_eNB_g[0][CC_id]->proc[sf].instance_cnt_tx == 0) {
+          /*if (PHY_vars_eNB_g[0][CC_id]->proc[sf].instance_cnt_tx == 0) {
             if (pthread_cond_signal(&PHY_vars_eNB_g[0][CC_id]->proc[sf].cond_tx) != 0) {
               LOG_E(PHY,"[eNB] ERROR pthread_cond_signal for eNB TX thread %d\n",sf);
 	      exit_fun("nothing to add");
-            }
+            } 
           } else {
             LOG_W(PHY,"[eNB] Frame %d, eNB TX thread %d busy!!\n",PHY_vars_eNB_g[0][CC_id]->proc[sf].frame_tx,sf);
             exit_fun("nothing to add");
-          }
+          }*/
         }
 
 #endif
@@ -1922,7 +1951,7 @@ static void* eNB_thread( void* arg )
 
         pthread_mutex_unlock( &PHY_vars_eNB_g[0][CC_id]->proc[sf].mutex_rx );
 
-        if (cnt_rx == 0) {
+        /*if (cnt_rx == 0) {
           // the thread was presumably waiting where it should and can now be woken up
           if (pthread_cond_signal(&PHY_vars_eNB_g[0][CC_id]->proc[sf].cond_rx) != 0) {
             LOG_E( PHY, "[eNB] ERROR pthread_cond_signal for eNB RX thread %d\n", sf );
@@ -1933,7 +1962,7 @@ static void* eNB_thread( void* arg )
           LOG_W( PHY, "[eNB] Frame %d, eNB RX thread %d busy!! instance_cnt %d CC_id %d\n", PHY_vars_eNB_g[0][CC_id]->proc[sf].frame_rx, sf, PHY_vars_eNB_g[0][CC_id]->proc[sf].instance_cnt_rx, CC_id );
           exit_fun( "RX thread busy" );
           break;
-        }
+        }*/
       }
     }
 
@@ -2879,10 +2908,10 @@ int main( int argc, char **argv )
       openair0_cfg[card].samples_per_frame = 76800;
       openair0_cfg[card].tx_bw = 2.5e6;
       openair0_cfg[card].rx_bw = 2.5e6;
-      openair0_cfg[card].samples_per_packet = 1024;
+      openair0_cfg[card].samples_per_packet = 3840; //1024*3;//1024;
 #ifdef OAI_USRP
     openair0_cfg[card].tx_forward_nsamps = 70;
-    openair0_cfg[card].tx_delay = 5;
+    openair0_cfg[card].tx_delay = 3;  //3
 #elif OAI_BLADERF
       openair0_cfg[card].tx_forward_nsamps = 0;
       openair0_cfg[card].tx_delay = 8;
