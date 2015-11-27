@@ -34,7 +34,16 @@
 // global var for openair performance profiler
 int opp_enabled = 0;
 
-
+#if defined(__arm__)
+double get_cpu_freq_GHz(void) {
+  double cpu_freq= 2E09; //manually return 2GHz
+  cpu_freq_GHz = cpu_freq/1E09;
+  printf("CPU Freq is %lf GHz \n", cpu_freq_GHz);
+  return cpu_freq_GHz;
+  }
+  
+#else  
+ 
 double get_cpu_freq_GHz(void) {
 
   time_stats_t ts = {0};
@@ -47,6 +56,8 @@ double get_cpu_freq_GHz(void) {
   printf("CPU Freq is %f \n", cpu_freq_GHz);
   return cpu_freq_GHz; 
 }
+
+#endif
 
 void print_meas_now(time_stats_t *ts, const char* name, int subframe, FILE* file_name){
 
