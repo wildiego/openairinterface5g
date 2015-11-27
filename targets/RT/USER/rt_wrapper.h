@@ -52,6 +52,7 @@ void set_latency_target(void);
 #include <linux/types.h>
 #include <syscall.h>
 #include <math.h>
+#include <unistd.h>
 
 #define RTIME long long int
 
@@ -88,6 +89,11 @@ double get_runtime_rx(int rx_subframe, uint16_t runtime_phy_rx[29][6], uint32_t 
 #define __NR_sched_setattr   351
 #define __NR_sched_getattr   352
 #endif
+
+ #ifdef __arm__
+ #define __NR_sched_setattr		380
+ #define __NR_sched_getattr		381
+ #endif
 
 struct sched_attr {
   __u32 size;

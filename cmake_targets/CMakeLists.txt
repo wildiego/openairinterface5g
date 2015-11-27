@@ -419,12 +419,12 @@ if (${RF_BOARD} STREQUAL "EXMIMO")
 
 elseif (${RF_BOARD} STREQUAL "OAI_USRP")
   include_directories("${OPENAIR_TARGETS}/ARCH/USRP/USERSPACE/LIB/")
-  include_directories("/opt/include/uhd")
+  include_directories("/opt/uhd/include")
   set(HW_SOURCE ${HW_SOURCE}
     ${OPENAIR_TARGETS}/ARCH/USRP/USERSPACE/LIB/usrp_lib.cpp)
-  LINK_DIRECTORIES("/opt/lib")
+  LINK_DIRECTORIES("/opt/uhd/lib")
   set(option_HW_lib "uhd")
-  set(LOWLATENCY False)
+  set(LOWLATENCY True)
 
 elseif (${RF_BOARD} STREQUAL "OAI_BLADERF")
   include_directories("${OPENAIR_TARGETS}/ARCH/BLADERF/USERSPACE/LIB/")
