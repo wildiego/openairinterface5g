@@ -51,13 +51,25 @@ typedef struct {
   int trials;
 } time_stats_t;
 #elif defined(__arm__)
+/*
 typedef struct {
   uint32_t in;
   uint32_t diff_now;
   uint32_t diff;
-  uint32_t p_time; /*!< \brief absolute process duration */
-  uint32_t diff_square; /*!< \brief process duration square */
+  uint32_t p_time; // \brief absolute process duration 
+  uint32_t diff_square; // \brief process duration square 
   uint32_t max;
+  int trials;
+} time_stats_t;
+*/
+
+typedef struct {
+  struct timespec in;
+  long long diff_now;
+  long long diff;
+  long long p_time; /*!< \brief absolute process duration */
+  long long diff_square; /*!< \brief process duration square */
+  long long max;
   int trials;
 } time_stats_t;
 
@@ -89,6 +101,18 @@ static inline unsigned long long rdtsc_oai(void)
 }
 
 #elif defined(__arm__)
+
+static inline  struct timespec  rdtsc_oai(void) __attribute__((always_inline));
+static inline struct timespec rdtsc_oai(void)
+{
+  struct timespec time;
+  clock_gettime(CLOCK_MONOTONIC, &time);
+  return (time);
+}
+
+
+//RDTSC disabled on ARM as it has issues with getting the right counter
+/*
 static inline uint32_t rdtsc_oai(void) __attribute__((always_inline));
 static inline uint32_t rdtsc_oai(void)
 {
@@ -96,6 +120,7 @@ static inline uint32_t rdtsc_oai(void)
   asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(r) );
   return r;
 }
+*/
 #endif
 
 static inline void start_meas(time_stats_t *ts)
@@ -108,6 +133,34 @@ static inline void start_meas(time_stats_t *ts)
   }
 }
 
+#if defined(__arm__)
+
+static inline void stop_meas(time_stats_t *ts)
+{
+
+  if (opp_enabled) {
+    struct timespec out = rdtsc_oai();
+    long long diff_sec=0, diff_nsec=0;
+    
+    //These steps are to avoid overflow of integers
+    diff_sec = out.tv_sec - ts->in.tv_sec;
+    diff_sec = diff_sec * 1E09;
+    diff_nsec =  out.tv_nsec - ts->in.tv_nsec;
+    
+    ts->diff_now = diff_sec + diff_nsec ; //(out->tv_sec)*1E09 + out->tv_nsec - (ts->in.tv_sec)*1E09  - in->tv_nsec  ;
+    
+    ts->diff += ts->diff_now;
+    /// process duration is the difference between two clock points
+    ts->p_time = ts->diff_now;
+    ts->diff_square += (ts->diff_now)*(ts->diff_now);
+    
+    if ((ts->diff_now) > ts->max)
+      ts->max = ts->diff_now;
+    
+  }
+}
+
+#else
 static inline void stop_meas(time_stats_t *ts)
 {
 
@@ -116,7 +169,6 @@ static inline void stop_meas(time_stats_t *ts)
     
     ts->diff_now = (out-ts->in);
     
-    ts->diff_now = (out-ts->in);
     ts->diff += (out-ts->in);
     /// process duration is the difference between two clock points
     ts->p_time = (out-ts->in);
@@ -127,6 +179,7 @@ static inline void stop_meas(time_stats_t *ts)
     
   }
 }
+#endif
 
 static inline void reset_meas(time_stats_t *ts) {
 
