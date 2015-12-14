@@ -57,6 +57,8 @@ typedef uint64_t RTIME;
 #define NB_ANTENNAS_TX_EMOS 2
 #define NB_ANTENNAS_RX_EMOS 2
 
+#define NO_ESTIMATES_DISK 100 //No. of estimates that are aquired before dumped to disk
+
 struct fifo_dump_emos_struct_UE {
   // RX
   uint64_t              timestamp;              //! Timestamp of the receiver

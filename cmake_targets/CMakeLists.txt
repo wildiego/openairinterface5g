@@ -606,6 +606,7 @@ add_boolean_option(EMOS False "????")
 if(${EMOS})
   add_definitions("-D_FILE_OFFSET_BITS=64")
   set(EMOS_LIB gps)
+message("EMOS set")
 endif(${EMOS})
 
 
@@ -1434,7 +1435,7 @@ target_link_libraries (lte-softmodem
 
 
 target_link_libraries (lte-softmodem ${LIBXML2_LIBRARIES})
-target_link_libraries (lte-softmodem pthread m ${CONFIG_LIBRARIES} rt crypt ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES} sctp ${option_HW_lib} ${XFORMS_LIBRARIES} )
+target_link_libraries (lte-softmodem pthread m ${CONFIG_LIBRARIES} rt crypt ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES} sctp ${option_HW_lib} ${XFORMS_LIBRARIES} ${EMOS_LIB})
 target_link_libraries (lte-softmodem ${LIBBOOST_LIBRARIES})
 
 # lte-softmodem-nos1 is both eNB and UE implementation
@@ -1466,7 +1467,7 @@ target_link_libraries (lte-softmodem-nos1
   -Wl,--end-group )
 
 target_link_libraries (lte-softmodem-nos1 ${LIBXML2_LIBRARIES})
-target_link_libraries (lte-softmodem-nos1 pthread m ${CONFIG_LIBRARIES} rt crypt ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES}  ${option_HW_lib} ${XFORMS_LIBRARIES} )
+target_link_libraries (lte-softmodem-nos1 pthread m ${CONFIG_LIBRARIES} rt crypt ${CRYPTO_LIBRARIES} ${OPENSSL_LIBRARIES} ${NETTLE_LIBRARIES}  ${option_HW_lib} ${XFORMS_LIBRARIES} ${EMOS_LIB})
 target_link_libraries (lte-softmodem-nos1 ${LIBBOOST_LIBRARIES})
 
 

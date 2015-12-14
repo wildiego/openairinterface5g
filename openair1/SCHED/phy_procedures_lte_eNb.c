@@ -500,14 +500,10 @@ void phy_procedures_emos_eNB_RX(unsigned char subframe,PHY_VARS_eNB *phy_vars_eN
 {
 
   uint8_t aa;
-  uint16_t last_subframe_emos;
+  uint16_t last_subframe_emos=0;
   uint16_t pilot_pos1 = 3 - phy_vars_eNB->lte_frame_parms.Ncp, pilot_pos2 = 10 - 2*phy_vars_eNB->lte_frame_parms.Ncp;
-  uint32_t bytes;
-
-  last_subframe_emos=0;
-
-
-
+  //uint32_t bytes;
+  emos_proc_t *emos_proc = &(phy_vars_eNB->emos_proc);
 
 #ifdef EMOS_CHANNEL
 
@@ -534,6 +530,7 @@ void phy_procedures_emos_eNB_RX(unsigned char subframe,PHY_VARS_eNB *phy_vars_eN
            sizeof(PHY_MEASUREMENTS_eNB));
     memcpy(&emos_dump_eNB.eNB_UE_stats[0],&phy_vars_eNB->eNB_UE_stats[0],NUMBER_OF_UE_MAX*sizeof(LTE_eNB_UE_stats));
 
+    /*
     bytes = rtf_put(CHANSOUNDER_FIFO_MINOR, &emos_dump_eNB, sizeof(fifo_dump_emos_eNB));
 
     //bytes = rtf_put(CHANSOUNDER_FIFO_MINOR, "test", sizeof("test"));
@@ -546,6 +543,20 @@ void phy_procedures_emos_eNB_RX(unsigned char subframe,PHY_VARS_eNB *phy_vars_eN
               phy_vars_eNB->Mod_id,phy_vars_eNB->proc[(subframe+1)%10].frame_rx, ((fifo_dump_emos_eNB*)&emos_dump_eNB)->frame_tx, subframe, bytes);
       }
     }
+    */
+    if (pthread_mutex_lock(&emos_proc->mutex_emos) != 0) {
+      LOG_E( PHY, "[SCHED][eNB] error locking mutex for EMOS\n");
+      return;
+    }
+    memcpy(&(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[emos_proc->instance_cnt]),&emos_dump_eNB,sizeof(fifo_dump_emos_eNB));
+    emos_proc->instance_cnt++;
+    if (emos_proc->instance_cnt == NO_ESTIMATES_DISK) 
+      emos_proc->instance_cnt = 0;
+    if (pthread_mutex_unlock(&emos_proc->mutex_emos) != 0) {
+      LOG_E(PHY,"[SCHED][eNB] error unlocking mutex for EMOS\n");
+      return;
+    }
+
   }
 }
 #endif

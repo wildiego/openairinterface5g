@@ -582,7 +582,6 @@ static void *scope_thread(void *arg)
 #endif
 
 #ifdef EMOS
-#define NO_ESTIMATES_DISK 100 //No. of estimates that are aquired before dumped to disk
 
 void* gps_thread (void *arg)
 {
@@ -653,23 +652,26 @@ void* gps_thread (void *arg)
   pthread_exit((void*) arg);
 
 }
+#endif
 
+#ifdef EMOS
 void *emos_thread (void *arg)
 {
-  char c;
-  char *fifo2file_buffer, *fifo2file_ptr;
+  char *emos_buffer_ptr;
 
-  int fifo, counter=0, bytes;
+  int inst_cnt_current;
 
   FILE  *dumpfile_id;
   char  dumpfile_name[1024];
   time_t starttime_tmp;
   struct tm starttime;
 
-  int channel_buffer_size,ret;
+  int channel_buffer_size;
+
+  emos_proc_t *emos_proc = &(PHY_vars_eNB_g[0][0]->emos_proc);
 
   time_t timer;
-  struct tm *now;
+  //struct tm *now = localtime(&timer);
 
   struct sched_param sched_param;
 
@@ -679,7 +681,6 @@ void *emos_thread (void *arg)
   printf("EMOS thread has priority %d\n",sched_param.sched_priority);
 
   timer = time(NULL);
-  now = localtime(&timer);
 
   if (UE_flag==0)
     channel_buffer_size = sizeof(fifo_dump_emos_eNB);
@@ -687,19 +688,20 @@ void *emos_thread (void *arg)
     channel_buffer_size = sizeof(fifo_dump_emos_UE);
 
   // allocate memory for NO_FRAMES_DISK channes estimations
-  fifo2file_buffer = malloc(NO_ESTIMATES_DISK*channel_buffer_size);
-  fifo2file_ptr = fifo2file_buffer;
+  emos_proc->emos_buffer = malloc(NO_ESTIMATES_DISK*channel_buffer_size);
+  emos_buffer_ptr = emos_proc->emos_buffer;
 
-  if (fifo2file_buffer == NULL) {
+  if (emos_proc->emos_buffer == NULL) {
     printf("[EMOS] Cound not allocate memory for fifo2file_buffer\n");
     exit(EXIT_FAILURE);
   }
 
+  /*
   if ((fifo = open(CHANSOUNDER_FIFO_DEV, O_RDONLY)) < 0) {
     fprintf(stderr, "[EMOS] Error opening the fifo\n");
     exit(EXIT_FAILURE);
   }
-
+  */
 
   time(&starttime_tmp);
   localtime_r(&starttime_tmp,&starttime);
@@ -714,65 +716,60 @@ void *emos_thread (void *arg)
     exit(EXIT_FAILURE);
   }
 
-
-  printf("[EMOS] starting dump, channel_buffer_size=%d, fifo %d\n",channel_buffer_size,fifo);
+  printf("[EMOS] starting dump to file %s (channel_buffer_size=%d)\n",dumpfile_name,channel_buffer_size);
 
   while (!oai_exit) {
-    /*
-    bytes = rtf_read_timed(fifo, fifo2file_ptr, channel_buffer_size,100);
-    if (bytes==0)
-    continue;
-    */
-    bytes = rtf_read_all_at_once(fifo, fifo2file_ptr, channel_buffer_size);
-
-    if (bytes<=0) {
-      usleep(100);
-      continue;
+    if (pthread_mutex_lock(&emos_proc->mutex_emos) != 0) {
+      LOG_E( PHY, "[EMOS dump] error locking mutex for EMOS\n");
+      break;
     }
 
-    if (bytes != channel_buffer_size) {
-      printf("[EMOS] ERROR! Only got %d bytes instead of %d!\n",bytes,channel_buffer_size);
+    while (emos_proc->instance_cnt%(NO_ESTIMATES_DISK/2) != 0) {
+      pthread_cond_wait(&emos_proc->cond_emos, &emos_proc->mutex_emos);
     }
 
-    /*
-    if (UE_flag==0)
-    printf("eNB: count %d, frame %d, read: %d bytes from the fifo\n",counter, ((fifo_dump_emos_eNB*)fifo2file_ptr)->frame_tx,bytes);
-    else
-    printf("UE: count %d, frame %d, read: %d bytes from the fifo\n",counter, ((fifo_dump_emos_UE*)fifo2file_ptr)->frame_rx,bytes);
-    */
+    inst_cnt_current = emos_proc->instance_cnt; //this should be either 0 or NO_ESTIMATES_DISK/2
 
-    fifo2file_ptr += channel_buffer_size;
-    counter ++;
+    if (pthread_mutex_unlock(&emos_proc->mutex_emos) != 0) {
+      LOG_E(PHY,"[EMOS dump] error unlocking mutex for EMOS\n");
+      break;
+    }
 
-    if (counter == NO_ESTIMATES_DISK) {
-      //reset stuff
-      fifo2file_ptr = fifo2file_buffer;
-      counter = 0;
+    if (oai_exit) break;
+
 
       //flush buffer to disk
-      if (UE_flag==0)
-        printf("[EMOS] eNB: count %d, frame %d, flushing buffer to disk\n",
-               counter, ((fifo_dump_emos_eNB*)fifo2file_ptr)->frame_tx);
+    if (UE_flag==0) {
+      if (inst_cnt_current==0)
+	emos_buffer_ptr = (char*) &(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[NO_ESTIMATES_DISK/2]);
       else
+	emos_buffer_ptr = (char*) &(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[0]);
+
+        printf("[EMOS] eNB: instance count %d, frame %d, flushing buffer to disk\n",
+               inst_cnt_current, ((fifo_dump_emos_eNB*)emos_buffer_ptr)->frame_tx);
+    }
+    else {
+      if (inst_cnt_current==0)
+	emos_buffer_ptr = (char*) &(((fifo_dump_emos_UE*) emos_proc->emos_buffer)[NO_ESTIMATES_DISK/2]);
+      else
+	emos_buffer_ptr = (char*) &(((fifo_dump_emos_UE*) emos_proc->emos_buffer)[0]);
         printf("[EMOS] UE: count %d, frame %d, flushing buffer to disk\n",
-               counter, ((fifo_dump_emos_UE*)fifo2file_ptr)->frame_rx);
+               inst_cnt_current, ((fifo_dump_emos_UE*)emos_buffer_ptr)->frame_rx);
+    }
 
+    if (fwrite(emos_buffer_ptr, sizeof(char), NO_ESTIMATES_DISK/2*channel_buffer_size, dumpfile_id) != NO_ESTIMATES_DISK/2*channel_buffer_size) {
+      fprintf(stderr, "[EMOS] Error writing to dumpfile\n");
+      exit(EXIT_FAILURE);
+    }
 
-      if (fwrite(fifo2file_buffer, sizeof(char), NO_ESTIMATES_DISK*channel_buffer_size, dumpfile_id) != NO_ESTIMATES_DISK*channel_buffer_size) {
-        fprintf(stderr, "[EMOS] Error writing to dumpfile\n");
-        exit(EXIT_FAILURE);
-      }
-
-      if (fwrite(&dummy_gps_data, sizeof(char), sizeof(struct gps_fix_t), dumpfile_id) != sizeof(struct gps_fix_t)) {
-        printf("[EMOS] Error writing to dumpfile, stopping recording\n");
-        exit(EXIT_FAILURE);
-      }
+    if (fwrite(&dummy_gps_data, sizeof(char), sizeof(struct gps_fix_t), dumpfile_id) != sizeof(struct gps_fix_t)) {
+      printf("[EMOS] Error writing to dumpfile, stopping recording\n");
+      exit(EXIT_FAILURE);
     }
   }
 
-  free(fifo2file_buffer);
+  free(emos_proc->emos_buffer);
   fclose(dumpfile_id);
-  close(fifo);
 
   pthread_exit((void*) arg);
 
@@ -2443,10 +2440,10 @@ int main( int argc, char **argv )
   unsigned int tcxo = 114;
 #endif
 
-#if defined (XFORMS)
+#if defined (XFORMS) || defined (EMOS)
   int ret;
 #endif
-#if defined (EMOS) || (! defined (RTAI))
+#if ! defined (RTAI)
   int error_code;
 #endif
 
@@ -3084,7 +3081,8 @@ int main( int argc, char **argv )
       p_exmimo_config->rf.do_autocal[ant] = 0;
   */
 
-#ifdef EMOS
+//#ifdef EMOS
+#if 0
   error_code = rtf_create(CHANSOUNDER_FIFO_MINOR,CHANSOUNDER_FIFO_SIZE);
 
   if (error_code==0)
@@ -3188,6 +3186,11 @@ int main( int argc, char **argv )
 #endif
 
 #ifdef EMOS
+  for (CC_id=0; CC_id<MAX_NUM_CCs; CC_id++) {
+    PHY_vars_eNB_g[0][CC_id]->emos_proc.instance_cnt = 0;
+    pthread_mutex_init( &PHY_vars_eNB_g[0][CC_id]->emos_proc.mutex_emos, NULL);
+    pthread_cond_init( &PHY_vars_eNB_g[0][CC_id]->emos_proc.cond_emos, NULL);
+  }
   ret = pthread_create(&thread3, NULL, emos_thread, NULL);
   printf("EMOS thread created, ret=%d\n",ret);
   ret = pthread_create(&thread4, NULL, gps_thread, NULL);
@@ -3406,12 +3409,18 @@ int main( int argc, char **argv )
   printf("waiting for EMOS thread\n");
   pthread_cancel(thread3);
   pthread_join(thread3,&status);
+  for (int CC_id=0; CC_id<MAX_NUM_CCs; CC_id++) {
+    pthread_mutex_destroy( &PHY_vars_eNB_g[0][CC_id]->emos_proc.mutex_emos );
+    pthread_cond_destroy( &PHY_vars_eNB_g[0][CC_id]->emos_proc.cond_emos );
+    PHY_vars_eNB_g[0][CC_id]->emos_proc.instance_cnt = 0;
+  }
   printf("waiting for GPS thread\n");
   pthread_cancel(thread4);
   pthread_join(thread4,&status);
 #endif
 
-#ifdef EMOS
+//#ifdef EMOS
+#if 0
   error_code = rtf_destroy(CHANSOUNDER_FIFO_MINOR);
   printf("[OPENAIR][SCHED][CLEANUP] EMOS FIFO closed, error_code %d\n", error_code);
 #endif

@@ -197,6 +197,23 @@ typedef struct {
   pthread_mutex_t mutex_rx;
 } eNB_proc_t;
 
+typedef struct {
+  /// \brief Instance count 
+  /// \internal This variable is protected by \ref mutex.
+  int instance_cnt;
+  /// pthread structure for emos thread
+  pthread_t pthread_emos;
+  /// condition variable for emos thread
+  pthread_cond_t cond_emos;
+  /// mutex for emos thread
+  pthread_mutex_t mutex_emos;
+  /// pointer to emos buffer
+  void* emos_buffer;
+  /// size of emos buffer;
+  int buffer_size;
+} emos_proc_t;
+
+
 //! \brief Number of eNB TX and RX threads.
 //! This number must be equal to the number of LTE subframes (10). Each thread is responsible for a single subframe.
 #define NUM_ENB_THREADS 10
@@ -207,6 +224,7 @@ typedef struct PHY_VARS_eNB_s {
   module_id_t          Mod_id;
   uint8_t              CC_id;
   eNB_proc_t           proc[NUM_ENB_THREADS];
+  emos_proc_t          emos_proc;
   uint8_t              local_flag;
   uint32_t             rx_total_gain_eNB_dB;
   LTE_DL_FRAME_PARMS   lte_frame_parms;
