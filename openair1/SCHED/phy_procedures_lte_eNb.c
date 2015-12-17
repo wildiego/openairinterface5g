@@ -536,6 +536,8 @@ void phy_procedures_emos_eNB_RX(unsigned char subframe,PHY_VARS_eNB *phy_vars_eN
     }
     memcpy(&(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[emos_proc->buffer_idx]),&emos_dump_eNB,sizeof(fifo_dump_emos_eNB));
     emos_proc->buffer_idx++;
+    if (emos_proc->buffer_idx == NO_ESTIMATES_DISK) 
+      emos_proc->buffer_idx = 0;
     // if we have reached half or the end of the buffer, signal the emos thread to write it to disk
     if (emos_proc->buffer_idx%(NO_ESTIMATES_DISK/2)==0) {
       emos_proc->instance_cnt++;
@@ -544,8 +546,6 @@ void phy_procedures_emos_eNB_RX(unsigned char subframe,PHY_VARS_eNB *phy_vars_eN
 	return;
       }
     }
-    if (emos_proc->buffer_idx == NO_ESTIMATES_DISK) 
-      emos_proc->buffer_idx = 0;
     if (pthread_mutex_unlock(&emos_proc->mutex_emos) != 0) {
       LOG_E(PHY,"[SCHED][eNB] error unlocking mutex for EMOS\n");
       return;

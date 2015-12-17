@@ -746,8 +746,8 @@ void *emos_thread (void *arg)
       else
 	emos_buffer_ptr = (char*) &(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[0]);
 
-        printf("[EMOS] eNB: buffer_cnt %d, frame %d, flushing buffer to disk\n",
-               buffer_idx, ((fifo_dump_emos_eNB*)emos_buffer_ptr)->frame_tx);
+        printf("[EMOS] eNB: buffer_cnt %d, frame %d, flushing buffer to disk (%p)\n",
+               buffer_idx, ((fifo_dump_emos_eNB*)emos_buffer_ptr)->frame_tx,emos_buffer_ptr);
     }
     else {
       if (buffer_idx==0)
@@ -762,10 +762,14 @@ void *emos_thread (void *arg)
       fprintf(stderr, "[EMOS] Error writing to dumpfile\n");
       exit(EXIT_FAILURE);
     }
-
-    if (fwrite(&dummy_gps_data, sizeof(char), sizeof(struct gps_fix_t), dumpfile_id) != sizeof(struct gps_fix_t)) {
-      printf("[EMOS] Error writing to dumpfile, stopping recording\n");
-      exit(EXIT_FAILURE);
+    if (buffer_idx==0) {
+      if (fwrite(&dummy_gps_data, sizeof(char), sizeof(struct gps_fix_t), dumpfile_id) != sizeof(struct gps_fix_t)) {
+	printf("[EMOS] Error writing to dumpfile, stopping recording\n");
+	exit(EXIT_FAILURE);
+      }
+      else {
+	printf("[EMOS] writing GPS data to disk (%d bytes)\n",sizeof(struct gps_fix_t));
+      }
     }
   }
 
