@@ -201,6 +201,8 @@ typedef struct {
   /// \brief Instance count 
   /// \internal This variable is protected by \ref mutex.
   int instance_cnt;
+  /// current index into the EMOS buffer
+  int buffer_idx;
   /// pthread structure for emos thread
   pthread_t pthread_emos;
   /// condition variable for emos thread

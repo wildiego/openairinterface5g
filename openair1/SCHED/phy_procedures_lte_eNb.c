@@ -530,33 +530,27 @@ void phy_procedures_emos_eNB_RX(unsigned char subframe,PHY_VARS_eNB *phy_vars_eN
            sizeof(PHY_MEASUREMENTS_eNB));
     memcpy(&emos_dump_eNB.eNB_UE_stats[0],&phy_vars_eNB->eNB_UE_stats[0],NUMBER_OF_UE_MAX*sizeof(LTE_eNB_UE_stats));
 
-    /*
-    bytes = rtf_put(CHANSOUNDER_FIFO_MINOR, &emos_dump_eNB, sizeof(fifo_dump_emos_eNB));
-
-    //bytes = rtf_put(CHANSOUNDER_FIFO_MINOR, "test", sizeof("test"));
-    if (bytes!=sizeof(fifo_dump_emos_eNB)) {
-      LOG_W(PHY,"[eNB %d] Frame %d, subframe %d, Problem writing EMOS data to FIFO (bytes=%d, size=%d)\n",
-            phy_vars_eNB->Mod_id,phy_vars_eNB->proc[(subframe+1)%10].frame_rx, subframe,bytes,sizeof(fifo_dump_emos_eNB));
-    } else {
-      if (phy_vars_eNB->proc[(subframe+1)%10].frame_tx%100==0) {
-        LOG_I(PHY,"[eNB %d] Frame %d (%d), subframe %d, Writing %d bytes EMOS data to FIFO\n",
-              phy_vars_eNB->Mod_id,phy_vars_eNB->proc[(subframe+1)%10].frame_rx, ((fifo_dump_emos_eNB*)&emos_dump_eNB)->frame_tx, subframe, bytes);
-      }
-    }
-    */
     if (pthread_mutex_lock(&emos_proc->mutex_emos) != 0) {
       LOG_E( PHY, "[SCHED][eNB] error locking mutex for EMOS\n");
       return;
     }
-    memcpy(&(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[emos_proc->instance_cnt]),&emos_dump_eNB,sizeof(fifo_dump_emos_eNB));
-    emos_proc->instance_cnt++;
-    if (emos_proc->instance_cnt == NO_ESTIMATES_DISK) 
-      emos_proc->instance_cnt = 0;
+    memcpy(&(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[emos_proc->buffer_idx]),&emos_dump_eNB,sizeof(fifo_dump_emos_eNB));
+    emos_proc->buffer_idx++;
+    // if we have reached half or the end of the buffer, signal the emos thread to write it to disk
+    if (emos_proc->buffer_idx%(NO_ESTIMATES_DISK/2)==0) {
+      emos_proc->instance_cnt++;
+      if (pthread_cond_signal(&emos_proc->cond_emos) != 0) {
+	LOG_E(PHY, "[SCHED][eNB] problem in signalling EMOS thread\n");
+	return;
+      }
+    }
+    if (emos_proc->buffer_idx == NO_ESTIMATES_DISK) 
+      emos_proc->buffer_idx = 0;
     if (pthread_mutex_unlock(&emos_proc->mutex_emos) != 0) {
       LOG_E(PHY,"[SCHED][eNB] error unlocking mutex for EMOS\n");
       return;
     }
-
+    //LOG_I(PHY,"[EMOS] subframe %d, buffer_idx %d, inst_cnt %d\n", subframe, emos_proc->buffer_idx, emos_proc->instance_cnt);
   }
 }
 #endif

@@ -659,7 +659,7 @@ void *emos_thread (void *arg)
 {
   char *emos_buffer_ptr;
 
-  int inst_cnt_current;
+  int buffer_idx;
 
   FILE  *dumpfile_id;
   char  dumpfile_name[1024];
@@ -724,11 +724,12 @@ void *emos_thread (void *arg)
       break;
     }
 
-    while (emos_proc->instance_cnt%(NO_ESTIMATES_DISK/2) != 0) {
+    while (emos_proc->instance_cnt < 0) {
       pthread_cond_wait(&emos_proc->cond_emos, &emos_proc->mutex_emos);
     }
 
-    inst_cnt_current = emos_proc->instance_cnt; //this should be either 0 or NO_ESTIMATES_DISK/2
+    buffer_idx = emos_proc->buffer_idx;
+    emos_proc->instance_cnt--; 
 
     if (pthread_mutex_unlock(&emos_proc->mutex_emos) != 0) {
       LOG_E(PHY,"[EMOS dump] error unlocking mutex for EMOS\n");
@@ -740,21 +741,21 @@ void *emos_thread (void *arg)
 
       //flush buffer to disk
     if (UE_flag==0) {
-      if (inst_cnt_current==0)
+      if (buffer_idx==0)
 	emos_buffer_ptr = (char*) &(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[NO_ESTIMATES_DISK/2]);
       else
 	emos_buffer_ptr = (char*) &(((fifo_dump_emos_eNB*) emos_proc->emos_buffer)[0]);
 
-        printf("[EMOS] eNB: instance count %d, frame %d, flushing buffer to disk\n",
-               inst_cnt_current, ((fifo_dump_emos_eNB*)emos_buffer_ptr)->frame_tx);
+        printf("[EMOS] eNB: buffer_cnt %d, frame %d, flushing buffer to disk\n",
+               buffer_idx, ((fifo_dump_emos_eNB*)emos_buffer_ptr)->frame_tx);
     }
     else {
-      if (inst_cnt_current==0)
+      if (buffer_idx==0)
 	emos_buffer_ptr = (char*) &(((fifo_dump_emos_UE*) emos_proc->emos_buffer)[NO_ESTIMATES_DISK/2]);
       else
 	emos_buffer_ptr = (char*) &(((fifo_dump_emos_UE*) emos_proc->emos_buffer)[0]);
-        printf("[EMOS] UE: count %d, frame %d, flushing buffer to disk\n",
-               inst_cnt_current, ((fifo_dump_emos_UE*)emos_buffer_ptr)->frame_rx);
+        printf("[EMOS] UE: buffer_idx %d, frame %d, flushing buffer to disk\n",
+               buffer_idx, ((fifo_dump_emos_UE*)emos_buffer_ptr)->frame_rx);
     }
 
     if (fwrite(emos_buffer_ptr, sizeof(char), NO_ESTIMATES_DISK/2*channel_buffer_size, dumpfile_id) != NO_ESTIMATES_DISK/2*channel_buffer_size) {
@@ -3187,7 +3188,8 @@ int main( int argc, char **argv )
 
 #ifdef EMOS
   for (CC_id=0; CC_id<MAX_NUM_CCs; CC_id++) {
-    PHY_vars_eNB_g[0][CC_id]->emos_proc.instance_cnt = 0;
+    PHY_vars_eNB_g[0][CC_id]->emos_proc.instance_cnt = -1;
+    PHY_vars_eNB_g[0][CC_id]->emos_proc.buffer_idx = 0;
     pthread_mutex_init( &PHY_vars_eNB_g[0][CC_id]->emos_proc.mutex_emos, NULL);
     pthread_cond_init( &PHY_vars_eNB_g[0][CC_id]->emos_proc.cond_emos, NULL);
   }
