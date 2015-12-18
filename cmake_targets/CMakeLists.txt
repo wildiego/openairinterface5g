@@ -1778,6 +1778,9 @@ add_executable(updatefw
   ${OPENAIR_TARGETS}/ARCH/EXMIMO/USERSPACE/OAI_FW_INIT/updatefw.c
 )
 
+# EMOS tools
+add_executable(dump_size ${OPENAIR_TARGETS}/PROJECTS/EMOS/dump_size.c)
+
 # ue_ip: purpose ???
 ###############
 list(APPEND ue_ip_src device.c common.c)
